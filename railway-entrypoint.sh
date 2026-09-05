@@ -57,7 +57,7 @@ ADMIN_PASSWORD="${ADMIN_PASSWORD:-}"
 
 if [ ! -f "$MARKER" ] && [ -n "$ADMIN_PASSWORD" ]; then
   echo "[pufferpanel-railway] Running db upgrade"
-  /pufferpanel/bin/pufferpanel db upgrade || echo "[pufferpanel-railway] db upgrade failed (upstream will retry)"
+  /usr/sbin/pufferpanel db upgrade || echo "[pufferpanel-railway] db upgrade failed (boot will retry)"
 
   ok=1
   if [ "${#ADMIN_USERNAME}" -lt 5 ]; then
@@ -75,7 +75,7 @@ if [ ! -f "$MARKER" ] && [ -n "$ADMIN_PASSWORD" ]; then
 
   if [ "$ok" -eq 1 ]; then
     echo "[pufferpanel-railway] Creating admin user '$ADMIN_USERNAME'"
-    if /pufferpanel/bin/pufferpanel user add \
+    if /usr/sbin/pufferpanel user add \
          --name "$ADMIN_USERNAME" \
          --email "$ADMIN_EMAIL" \
          --admin \
@@ -100,5 +100,13 @@ for b in /var/lib/pufferpanel/binaries/depotdownloader/* \
   [ -f "$b" ] && chmod +x "$b" 2>/dev/null || true
 done
 
-echo "[pufferpanel-railway] Handing off to upstream entrypoint"
-exec /pufferpanel/bin/entrypoint.sh
+# db upgrade is idempotent; exit 9 = nothing to run (upstream entrypoint treats
+# 0/9 as OK). The deb ships no entrypoint.sh (systemd unit runs the binary
+# directly), so replicate its boot sequence here.
+/usr/sbin/pufferpanel db upgrade
+code=$?
+if [ "$code" -ne 0 ] && [ "$code" -ne 9 ]; then
+  echo "[pufferpanel-railway] db upgrade failed with exit $code"
+  exit 1
+fi
+exec /usr/sbin/pufferpanel run

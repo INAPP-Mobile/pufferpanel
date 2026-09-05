@@ -1,32 +1,33 @@
-FROM pufferpanel/pufferpanel:3.0.9
+# glibc base (Debian): game servers and everything PufferPanel downloads at
+# runtime are glibc-linked (Unity/7DTD relocates UnityPlayer.so against glibc
+# symbols, DepotDownloader is a .NET glibc ELF, javadl pulls Adoptium glibc
+# JREs). The upstream Alpine image breaks all three (musl); Debian runs them
+# natively. Built from the official .deb (no Docker Hub Debian tag exists).
+FROM debian:trixie-slim
+
+ARG PP_VERSION=3.0.9
+ARG PP_DEB_URL=https://github.com/PufferPanel/PufferPanel/releases/download/v${PP_VERSION}/pufferpanel_${PP_VERSION}_amd64.deb
+
+ADD ${PP_DEB_URL} /tmp/pufferpanel.deb
+# deb layout: /usr/sbin/pufferpanel (static binary), /etc/pufferpanel/config.json
+# (defaults already point SQLite + daemon root at /var/lib/pufferpanel),
+# /var/www/pufferpanel (embedded frontend path). No deb dependencies.
+RUN dpkg -i /tmp/pufferpanel.deb && rm /tmp/pufferpanel.deb
 
 # The tty (host) environment hardcodes bash as the server shell
-# (servers/tty/tty.go: const Shell = "bash") — the Alpine base only ships
-# busybox sh, so game servers would fail with "exec: bash: not found".
-# gcompat + libstdc++ + libgcc: PufferPanel downloads glibc-linked binaries at
-# runtime (DepotDownloader for SteamCS = .NET self-contained ELF, interpreter
-# /lib64/ld-linux-x86-64.so.2) — without these it dies with "cannot execute:
-# required file not found". Verified: DepotDownloader 3.4.0 connects to Steam
-# with exactly this set.
-RUN apk add --no-cache bash gcompat libstdc++ libgcc
-
-# Minecraft/Node game templates auto-download java${version}/node${version} via
-# javadl/nodejsdl — but those adoptium/nodejs.org linux-x64 builds are glibc
-# linked and FAIL on musl even under gcompat (JNI libjimage won't load).
-# javadl/nodejsdl exec.LookPath("java21"/"node20") FIRST and skip the download
-# when found — so ship musl-native runtimes and expose them under the exact
-# versioned names the templates request.
-RUN apk add --no-cache \
-      openjdk8-jre-base openjdk17-jre-headless openjdk21-jre-headless \
-      openjdk25-jre-headless nodejs npm && \
-    ln -sf /usr/lib/jvm/java-8-openjdk/jre/bin/java /usr/local/bin/java8 && \
-    ln -sf /usr/lib/jvm/java-17-openjdk/bin/java /usr/local/bin/java17 && \
-    ln -sf /usr/lib/jvm/java-21-openjdk/bin/java /usr/local/bin/java21 && \
-    ln -sf /usr/lib/jvm/java-25-openjdk/bin/java /usr/local/bin/java25 && \
-    ln -sf /usr/bin/java /usr/local/bin/java && \
-    ln -sf /usr/bin/node /usr/local/bin/node24 && \
+# (servers/tty/tty.go: const Shell = "bash") — present on Debian.
+# steamcmd/srcds games want 32-bit runtime libs (lib32gcc-s1); cheap insurance.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      bash binutils ca-certificates curl wget lib32gcc-s1 \
+      openjdk-21-jre-headless nodejs npm && \
+    rm -rf /var/lib/apt/lists/* && \
+    ln -sf $(ls /usr/lib/jvm/java-21-openjdk*/bin/java | head -1) /usr/local/bin/java21 && \
+    ln -sf /usr/bin/node /usr/local/bin/node20 && \
     ln -sf /usr/bin/node /usr/local/bin/node22 && \
-    ln -sf /usr/bin/node /usr/local/bin/node20
+    ln -sf /usr/bin/node /usr/local/bin/node24
+# javaversion 8/25: javadl exec.LookPath("java8"/"java25") misses locally and
+# downloads Adoptium glibc JREs — which now WORK natively on Debian, so no
+# musl-JRE workaround needed for uncovered versions.
 
 # Upstream v3.0.9 execs `bash -c ${PUFFERPANEL_SERVER_COMMAND}` unquoted
 # (servers/tty/tty.go:360), so bash word-splits the expansion and any
@@ -38,7 +39,7 @@ RUN chmod +x /usr/local/bin/bash && mv /bin/bash /bin/bash.real && \
 
 # Persist panel config (session key, settings) on the data volume so
 # user sessions survive redeploys instead of rotating every deploy
-# (entrypoint seeds /var/lib/pufferpanel/config.json from the image default)
+# (entrypoint seeds /var/lib/pufferpanel/config.json from the deb default)
 ENV PUFFER_CONFIG=/var/lib/pufferpanel/config.json
 
 COPY railway-entrypoint.sh /usr/local/bin/railway-entrypoint.sh
@@ -47,5 +48,6 @@ RUN chmod +x /usr/local/bin/railway-entrypoint.sh
 # 8080 = panel web UI (Railway PORT), 5657 = SFTP daemon (optional TCP proxy)
 EXPOSE 8080 5657
 
-# Upstream image runs as root; volume is root-owned on Railway so keep root
+# Run as root: Railway volumes are root-owned, and game servers run as
+# host processes under the panel (disableUnshare).
 ENTRYPOINT ["/usr/local/bin/railway-entrypoint.sh"]
