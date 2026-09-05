@@ -18,13 +18,24 @@ RUN dpkg -i /tmp/pufferpanel.deb && rm /tmp/pufferpanel.deb
 # (servers/tty/tty.go: const Shell = "bash") — present on Debian.
 # steamcmd/srcds games want 32-bit runtime libs (lib32gcc-s1); cheap insurance.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      bash binutils ca-certificates curl wget lib32gcc-s1 \
+      bash binutils ca-certificates curl wget lib32gcc-s1 libc6-i386 \
       openjdk-21-jre-headless nodejs npm && \
     rm -rf /var/lib/apt/lists/* && \
     ln -sf $(ls /usr/lib/jvm/java-21-openjdk*/bin/java | head -1) /usr/local/bin/java21 && \
     ln -sf /usr/bin/node /usr/local/bin/node20 && \
     ln -sf /usr/bin/node /usr/local/bin/node22 && \
     ln -sf /usr/bin/node /usr/local/bin/node24
+
+# Steam SDK for source-game dedicated servers (7 Days to Die, Rust, Valheim, ...):
+# they dlopen Valve's steamclient.so at runtime but game depots don't ship it.
+# Bundle the steamcmd installer (its self-update materializes
+# linux64/steamclient.so); libc6-i386 above is required for the 32-bit
+# steamcmd bootstrap binary to run that self-update. The entrypoint copies
+# this to the persistent volume on first boot and symlinks every server's
+# .steam/sdk64/steamclient.so to it.
+RUN mkdir -p /opt/steamcmd && \
+    curl -sSL https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz | \
+    tar -xz -C /opt/steamcmd
 # javaversion 8/25: javadl exec.LookPath("java8"/"java25") misses locally and
 # downloads Adoptium glibc JREs — which now WORK natively on Debian, so no
 # musl-JRE workaround needed for uncovered versions.

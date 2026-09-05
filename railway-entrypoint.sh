@@ -100,6 +100,34 @@ for b in /var/lib/pufferpanel/binaries/depotdownloader/* \
   [ -f "$b" ] && chmod +x "$b" 2>/dev/null || true
 done
 
+# --- Steam SDK wiring ---------------------------------------------------------------
+# Source-game dedicated servers (7 Days to Die, Rust, Valheim, ...) dlopen
+# steamclient.so from <server>/.steam/sdk64/ but game depots don't ship it —
+# without it Steamworks init fails ("Could not initialize GameServer").
+# Materialize it once from the bundled steamcmd self-update, keep it on the
+# persistent volume (self-update needs +w on the directory), and symlink it
+# into every server dir. A 60s reconciler loop keeps new servers linked
+# without needing a container restart.
+STEAM_VOL="/var/lib/pufferpanel/steamcmd"
+link_steam_sdk() {
+  if [ -f "$STEAM_VOL/linux64/steamclient.so" ]; then
+    for d in /var/lib/pufferpanel/servers/*; do
+      [ -d "$d" ] || continue
+      mkdir -p "$d/.steam/sdk64"
+      ln -sfn "$STEAM_VOL/linux64/steamclient.so" "$d/.steam/sdk64/steamclient.so"
+    done
+  fi
+}
+if [ ! -f "$STEAM_VOL/linux64/steamclient.so" ] && [ -f /opt/steamcmd/steamcmd.sh ]; then
+  echo "[pufferpanel-railway] Materializing steamclient.so via steamcmd self-update"
+  mkdir -p "$STEAM_VOL"
+  cp -r /opt/steamcmd/. "$STEAM_VOL"/
+  chmod -R u+w "$STEAM_VOL"
+  (cd "$STEAM_VOL" && ./steamcmd.sh +quit </dev/null >/dev/null 2>&1 || true)
+fi
+link_steam_sdk
+( while :; do sleep 60; link_steam_sdk; done ) &
+
 # db upgrade is idempotent; exit 9 = nothing to run (upstream entrypoint treats
 # 0/9 as OK). The deb ships no entrypoint.sh (systemd unit runs the binary
 # directly), so replicate its boot sequence here.
