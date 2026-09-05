@@ -88,5 +88,17 @@ if [ ! -f "$MARKER" ] && [ -n "$ADMIN_PASSWORD" ]; then
   fi
 fi
 
+# --- Runtime binary compatibility ------------------------------------------------
+# PufferPanel fetches helper binaries into the volume at runtime (DepotDownloader,
+# adoptium JREs, node). glibc-built ones run under gcompat; musl-native java/node
+# are already on PATH via Dockerfile symlinks, so javadl/nodejsdl LookPath skips
+# their glibc downloads. Defensive: ensure exec bits on volume binaries so a
+# volume restore or unzip with lost modes doesn't brick installs.
+for b in /var/lib/pufferpanel/binaries/depotdownloader/* \
+         /var/lib/pufferpanel/binaries/java* \
+         /var/lib/pufferpanel/binaries/node*; do
+  [ -f "$b" ] && chmod +x "$b" 2>/dev/null || true
+done
+
 echo "[pufferpanel-railway] Handing off to upstream entrypoint"
 exec /pufferpanel/bin/entrypoint.sh
