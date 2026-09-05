@@ -1,0 +1,28 @@
+{
+  "variables": [
+    {
+      "name": "ADMIN_USERNAME",
+      "defaultValue": "admin",
+      "description": "Admin username (min 5 chars, printable ASCII)",
+      "isOptional": true
+    },
+    {
+      "name": "ADMIN_EMAIL",
+      "defaultValue": "admin@example.com",
+      "description": "Admin email address (placeholder is fine — no SMTP configured)",
+      "isOptional": true
+    },
+    {
+      "name": "ADMIN_PASSWORD",
+      "defaultValue": "${{secret(16)}}",
+      "description": "Admin password — auto-generated, min 8 chars. Copy from the Variables tab after deploy.",
+      "isOptional": true
+    },
+    {
+      "name": "PUFFER_PANEL_REGISTRATIONENABLED",
+      "defaultValue": "false",
+      "description": "Allow public self-registration (false = invite-only via admin-created accounts)",
+      "isOptional": true
+    }
+  ]
+}

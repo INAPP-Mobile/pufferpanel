@@ -1,0 +1,14 @@
+#!/bin/sh
+# Upstream PufferPanel v3.0.9 tty (host) environment execs:
+#   bash -c ${PUFFERPANEL_SERVER_COMMAND}        (servers/tty/tty.go:360, UNQUOTED)
+# The child bash word-splits that unquoted expansion, so any multi-word
+# server command breaks ("while: command not found"; "echo a && sleep 60"
+# silently drops the tail). Only single-word commands survive, by accident.
+# This shim sits earlier in PATH than /bin/bash (Alpine PATH puts
+# /usr/local/bin first) and, when invoked with exactly that literal
+# payload, re-execs the real bash with the env var's value properly
+# quoted. Every other invocation passes through untouched.
+if [ $# -eq 2 ] && [ "$1" = "-c" ] && [ "$2" = '${PUFFERPANEL_SERVER_COMMAND}' ]; then
+  exec /bin/bash.real -c "$PUFFERPANEL_SERVER_COMMAND"
+fi
+exec /bin/bash.real "$@"
