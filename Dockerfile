@@ -36,6 +36,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN mkdir -p /opt/steamcmd && \
     curl -sSL https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz | \
     tar -xz -C /opt/steamcmd
+
+# playit.gg agent (playitd): optional outbound UDP/TCP tunnel. Railway has NO
+# inbound UDP (HTTP + TCP proxy only), so UDP games (Valheim 2456, Rust 28015,
+# 7DTD 26900, CS2 27015) are unreachable externally without a tunnel. Users
+# with a playit.gg account set PLAYIT_SECRET; mappings are managed in the
+# playit dashboard (the agent does not create them itself). Bundled at build
+# time so fresh installs never depend on a boot-time GitHub download.
+ARG PLAYIT_VERSION=1.0.10
+ADD https://github.com/playit-cloud/playit-agent/releases/download/v${PLAYIT_VERSION}/playit-linux-amd64 /usr/local/bin/playitd
+RUN chmod +x /usr/local/bin/playitd
 # javaversion 8/25: javadl exec.LookPath("java8"/"java25") misses locally and
 # downloads Adoptium glibc JREs — which now WORK natively on Debian, so no
 # musl-JRE workaround needed for uncovered versions.

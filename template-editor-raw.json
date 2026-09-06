@@ -14,5 +14,9 @@
   "PUFFER_PANEL_REGISTRATIONENABLED": {
     "value": "false",
     "description": "Allow public self-registration (false = invite-only via admin-created accounts)"
+  },
+  "PLAYIT_SECRET": {
+    "value": "",
+    "description": "Optional playit.gg agent secret for UDP game tunnels (Valheim/Rust/7DTD/CS2). Get it at playit.gg; port mappings are managed in the playit dashboard. Leave empty if you only host TCP games (e.g. Minecraft)."
   }
 }

@@ -137,4 +137,19 @@ if [ "$code" -ne 0 ] && [ "$code" -ne 9 ]; then
   echo "[pufferpanel-railway] db upgrade failed with exit $code"
   exit 1
 fi
+
+# --- playit.gg tunnel (optional) -----------------------------------------------------
+# Railway exposes only HTTP/HTTPS + TCP proxies publicly — no inbound UDP. The
+# playit agent opens an OUTBOUND tunnel, so UDP game servers (Valheim 2456,
+# Rust 28015, 7DTD 26900, CS2 27015) become joinable via the playit address.
+# Secret from https://playit.gg dashboard; port mappings are managed there
+# too (create them once pointing at 127.0.0.1:<game port> — the agent does
+# NOT auto-create mappings). Never fatal: a playit outage must not take the
+# panel down, and users without PLAYIT_SECRET are unaffected.
+if [ -n "$PLAYIT_SECRET" ] && [ -x /usr/local/bin/playitd ]; then
+  echo "[pufferpanel-railway] PLAYIT_SECRET set — starting playit.gg agent"
+  /usr/local/bin/playitd --secret "$PLAYIT_SECRET" </dev/null >>/var/lib/pufferpanel/playitd.log 2>&1 &
+  echo "[pufferpanel-railway] playit agent launched (log: /var/lib/pufferpanel/playitd.log)"
+fi
+
 exec /usr/sbin/pufferpanel run

@@ -20,6 +20,8 @@ This template deploys a single service running PufferPanel v3 (panel + daemon in
 
 Because Railway doesn't grant `CAP_SYS_ADMIN`, game servers run as **direct host processes** under the panel (upstream `disableUnshare` mode) rather than in Docker sandboxes. The "docker" environment option is intentionally disabled; choose "host"-style server definitions when adding servers. Game servers also need their listen ports reachable from players. Railway exposes only HTTP/HTTPS domains and TCP proxies to the public internet — **inbound UDP is not supported** (enabling static outbound IPs does not change this; those addresses are egress-only). TCP-native games (e.g., Minecraft Java, Terraria) work via Railway TCP proxies; UDP-based games (7 Days to Die, Valheim, CS2) are only joinable from the private network, not by external players. This panel is therefore best suited for panel management, file/console/SFTP administration, and TCP-reachable game servers.
 
+**Playing UDP games externally (optional playit.gg tunnel):** set the `PLAYIT_SECRET` variable to your agent secret from [playit.gg](https://playit.gg) and the container automatically starts the playit agent, which opens an *outbound* tunnel — no inbound ports needed. In the playit dashboard, create port mappings for your game servers (e.g., `127.0.0.1:2456` UDP for Valheim, `127.0.0.1:26900` UDP for 7DTD, `127.0.0.1:7777` UDP for ARK) and share the generated `*.playit.gg` address with players instead of the Railway domain. Leave `PLAYIT_SECRET` empty if you only host TCP games.
+
 > **Note:** Railway's HTTP proxy handles SSL termination for the panel UI. The SFTP daemon (port 5657) requires a Railway TCP proxy if you want external SFTP access.
 
 **First-run setup: none.** The entrypoint runs the database migration and creates the admin account automatically:
@@ -46,6 +48,7 @@ Railway-injected (no action needed): `PORT` (panel web listen port), `RAILWAY_PU
 |------|----------|-------------|
 | 8080 | TCP | Panel web UI (Railway `PORT`) |
 | 5657 | TCP | SFTP daemon — attach a Railway TCP proxy for external file access |
+| Game ports (e.g. 2456, 7777, 26900) | UDP | Not exposed by Railway natively — set `PLAYIT_SECRET` (see above) to expose them via playit.gg |
 
 ## Why Deploy
 
