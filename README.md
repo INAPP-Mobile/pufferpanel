@@ -1,6 +1,6 @@
 # Deploy and Host
 
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.com/deploy/hLWVGl)
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.com/deploy/pufferpanel)
 
 PufferPanel — open-source game server management panel. Manage Minecraft, CS2, Valheim, and 50+ other game servers from a clean web UI with per-server users, file manager, console, stats, and SFTP access.
 
