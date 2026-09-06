@@ -50,6 +50,17 @@ Railway-injected (no action needed): `PORT` (panel web listen port), `RAILWAY_PU
 | 5657 | TCP | SFTP daemon — attach a Railway TCP proxy for external file access |
 | Game ports (e.g. 2456, 7777, 26900) | UDP | Not exposed by Railway natively — set `PLAYIT_SECRET` (see above) to expose them via playit.gg |
 
+## Supported Game Templates
+
+| Template family | Status on this template | Notes |
+|---|---|---|
+| Minecraft (Java/Bedrock/FTB/CurseForge/Velocity/Waterfall/Bungee) | ✅ Works | TCP 25565 native via Railway TCP proxy |
+| Discord bots (JDA, discord.js, discord.py) | ✅ Works | Java 8/21, Node 20/22/24, pip preinstalled |
+| 7 Days to Die, ARK, Satisfactory, Squad | ✅ Installs + boots | Steam SDK wired automatically; join via playit.gg (UDP) |
+| Source games (CS:GO/CS:S/TF2/GMod/CS 1.6, Rust, Unturned) | ✅ Installs + boots | 32- & 64-bit Steam SDK linked; join via playit.gg (UDP) |
+| Valheim, Don't Starve Together, Eco, Factorio, Terraria (all), Project Zomboid, Vintage Story, Starbound, tModLoader, TShock, PocketMine, TeamSpeak | ✅ Installs + boots | `libcurl-gnutls` shim + mono preinstalled; join via playit.gg (UDP) |
+| ARMA 3, Starbound (steam login) | ⚠️ Needs real Steam account | Template asks for Steam credentials at install |
+
 ## Why Deploy
 
 - **One-click deploy**: panel + daemon in a single service, zero manual setup

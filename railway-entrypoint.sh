@@ -113,8 +113,13 @@ link_steam_sdk() {
   if [ -f "$STEAM_VOL/linux64/steamclient.so" ]; then
     for d in /var/lib/pufferpanel/servers/*; do
       [ -d "$d" ] || continue
-      mkdir -p "$d/.steam/sdk64"
+      mkdir -p "$d/.steam/sdk64" "$d/.steam/sdk32"
       ln -sfn "$STEAM_VOL/linux64/steamclient.so" "$d/.steam/sdk64/steamclient.so"
+      # 32-bit steamclient: legacy srcds/hlds games (CS:S, TF2, GMod, CS 1.6)
+      # load the sdk32 variant; Valve ships it in the steamcmd self-update.
+      if [ -f "$STEAM_VOL/linux32/steamclient.so" ]; then
+        ln -sfn "$STEAM_VOL/linux32/steamclient.so" "$d/.steam/sdk32/steamclient.so"
+      fi
     done
   fi
 }

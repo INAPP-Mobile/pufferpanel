@@ -19,12 +19,21 @@ RUN dpkg -i /tmp/pufferpanel.deb && rm /tmp/pufferpanel.deb
 # steamcmd/srcds games want 32-bit runtime libs (lib32gcc-s1); cheap insurance.
 RUN apt-get update && apt-get install -y --no-install-recommends \
       bash binutils ca-certificates curl wget lib32gcc-s1 libc6-i386 \
-      openjdk-21-jre-headless nodejs npm && \
+      openjdk-21-jre-headless nodejs npm \
+      unzip xz-utils bzip2 python3-pip \
+      lib32stdc++6 libvulkan1 mono-complete && \
     rm -rf /var/lib/apt/lists/* && \
     ln -sf $(ls /usr/lib/jvm/java-21-openjdk*/bin/java | head -1) /usr/local/bin/java21 && \
     ln -sf /usr/bin/node /usr/local/bin/node20 && \
     ln -sf /usr/bin/node /usr/local/bin/node22 && \
     ln -sf /usr/bin/node /usr/local/bin/node24
+# libcurl-gnutls.so.3 shim: DST (dontstarve_dedicated_server_nullrenderer) and
+# Valheim's steamclient link against libcurl-gnutls (gnutls flavor was dropped
+# from Debian trixie; only the OpenSSL flavor ships). Symlink satisfies the
+# loader; TLS via OpenSSL flavor is fine for these game servers.
+RUN mkdir -p /usr/local/lib && \
+    ln -sf /lib/x86_64-linux-gnu/libcurl.so.4 /usr/local/lib/libcurl-gnutls.so.3 && \
+    ldconfig
 
 # Steam SDK for source-game dedicated servers (7 Days to Die, Rust, Valheim, ...):
 # they dlopen Valve's steamclient.so at runtime but game depots don't ship it.
